@@ -1,6 +1,13 @@
+// Hono
 import { Hono } from "hono";
-import OpenAI from "openai";
+
+// Email
 import * as PostalMime from "postal-mime";
+import { createMimeMessage } from "mimetext";
+import { EmailMessage as CloudflareEmailMessage } from "cloudflare:email";
+
+// OpenAI
+import OpenAI from "openai";
 
 const base = new Hono();
 
@@ -10,8 +17,6 @@ interface ReceivedEmail {
 	raw: ReadableStream<Uint8Array>;
 	rawSize: number;
 	headers: Headers;
-
-	// Updated with correct Cloudflare Email Workers API types
 	setReject: (reason: string) => void;
 	forward: (rcptTo: string, headers?: Headers) => Promise<void>;
 	reply: (message: EmailMessage) => Promise<void>;
@@ -22,9 +27,6 @@ const app = Object.assign(base, {
 		const parser = new PostalMime.default();
 		const rawEmail = new Response(message.raw);
 		const email = await parser.parse(await rawEmail.arrayBuffer());
-
-		console.log("From:", email.from);
-		console.log("Subject:", email.subject ?? "No subject");
 
 		const openai = new OpenAI({
 			apiKey: env.OPENAI_API_KEY,
@@ -48,7 +50,34 @@ const app = Object.assign(base, {
 			],
 		});
 
-		console.log("Response:", response.choices[0].message.content);
+		if (response.choices[0].message.content === "spam") {
+			message.setReject("This email was rejected as spam");
+			return;
+		}
+
+		const msg = createMimeMessage();
+		msg.setSender({
+			addr: message.to,
+		});
+		msg.setRecipient(email.from.address as string);
+		msg.setHeader("In-Reply-To", email.messageId);
+		msg.setSubject(`Re: ${email.subject}`);
+		msg.addMessage({
+			contentType: "text/plain",
+			data: "We've received your email and will handle it as soon as possible.",
+		});
+
+		const replyMessage = new CloudflareEmailMessage(
+			message.to,
+			message.from,
+			msg.asRaw(),
+		);
+
+		// Reply to the sender
+		await message.reply(replyMessage);
+
+		// Forward to test@example.com
+		//await message.forward("test@example.com");
 
 		return;
 	},
