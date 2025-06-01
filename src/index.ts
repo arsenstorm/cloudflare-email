@@ -74,7 +74,7 @@ const app = Object.assign(base, {
 		);
 
 		// Reply to the sender
-		await message.reply(replyMessage);
+		//await message.reply(replyMessage);
 
 		// Forward to specified email
 		if (env.FORWARD_EMAIL) {

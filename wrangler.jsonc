@@ -8,7 +8,16 @@
 		{
 			"name": "EMAIL"
 		}
-	]
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	}
 	// "vars": {
 	//   "MY_VAR": "my-variable"
 	// },
