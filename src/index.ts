@@ -76,8 +76,10 @@ const app = Object.assign(base, {
 		// Reply to the sender
 		await message.reply(replyMessage);
 
-		// Forward to test@example.com
-		//await message.forward("test@example.com");
+		// Forward to specified email
+		if (env.FORWARD_EMAIL) {
+			await message.forward(env.FORWARD_EMAIL);
+		}
 
 		return;
 	},
